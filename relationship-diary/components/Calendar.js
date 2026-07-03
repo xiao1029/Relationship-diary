@@ -49,7 +49,12 @@ export default function Calendar() {
   return (
     <>
       <header className="cal-header">
-        <div className="eyebrow">RELATIONSHIP JOURNAL</div>
+        <div className="eyebrow-row">
+          <span className="eyebrow">RELATIONSHIP JOURNAL</span>
+          <button className="search-link" onClick={() => router.push("/search")}>
+            🔍 タグで探す
+          </button>
+        </div>
         <div className="month-row serif">
           <button
             className="nav-btn"
@@ -114,12 +119,27 @@ export default function Calendar() {
              安全領域の高さ分をさらに上乗せする */
           padding: calc(env(safe-area-inset-top) + 22px) 12px 28px;
         }
+        .eyebrow-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 6px;
+          padding: 0 12px;
+        }
         .eyebrow {
           font-size: 11px;
           letter-spacing: 0.18em;
           color: #a9a398;
-          margin-bottom: 6px;
-          padding: 0 12px;
+        }
+        .search-link {
+          font-family: "Zen Kaku Gothic New", sans-serif;
+          font-size: 11px;
+          color: #c9c4b8;
+          background: none;
+          border: 1px solid rgba(247, 243, 234, 0.28);
+          border-radius: 999px;
+          padding: 5px 10px;
+          cursor: pointer;
         }
         .month-row {
           font-size: 26px;
