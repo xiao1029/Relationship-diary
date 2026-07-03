@@ -110,29 +110,41 @@ export default function Calendar() {
         .cal-header {
           background: var(--chrome-bg);
           color: var(--paper);
-          padding: 20px 24px 28px;
+          /* iPhoneのステータスバー（ノッチ/Dynamic Island）と被らないように、
+             安全領域の高さ分をさらに上乗せする */
+          padding: calc(env(safe-area-inset-top) + 22px) 12px 28px;
         }
         .eyebrow {
           font-size: 11px;
           letter-spacing: 0.18em;
           color: #a9a398;
           margin-bottom: 6px;
+          padding: 0 12px;
         }
         .month-row {
           font-size: 26px;
           font-weight: 700;
           display: flex;
-          align-items: baseline;
+          align-items: center;
           justify-content: space-between;
         }
         .nav-btn {
           font-family: "Zen Kaku Gothic New", sans-serif;
-          font-size: 20px;
+          font-size: 22px;
           color: #a9a398;
           background: none;
           border: none;
           cursor: pointer;
-          padding: 4px 10px;
+          /* タップしやすいよう44px四方以上を確保する */
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .nav-btn:active {
+          color: var(--paper);
         }
         .cal-body {
           background: var(--paper);
