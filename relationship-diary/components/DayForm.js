@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getEntry, saveEntry, deleteEntry } from "@/lib/storage";
 import { formatDateTitle, formatWeekday, formatYear } from "@/lib/dates";
+import { PRESET_TAGS, normalizeTag } from "@/lib/tags";
 
 const LAYERS = [
   {
     id: "a",
-    tag: "01・FACT",
+    code: "01・FACT",
     title: "起きた出来事",
     hint: "感情を交えず、事実だけを書きましょう",
     placeholder: "何が起きましたか？（例：LINEを既読無視された）",
@@ -16,7 +17,7 @@ const LAYERS = [
   },
   {
     id: "b",
-    tag: "02・FEEL",
+    code: "02・FEEL",
     title: "感じたこと",
     hint: "浮かんだ感情や考えをそのまま書き出します",
     placeholder: "どう感じましたか？",
@@ -24,7 +25,7 @@ const LAYERS = [
   },
   {
     id: "c",
-    tag: "03・INSIGHT",
+    code: "03・INSIGHT",
     title: "気づいたこと",
     hint: "少し離れた視点で見直すと、何が見えますか？",
     placeholder: "分析してみて、気づいたことは？",
@@ -35,6 +36,9 @@ const LAYERS = [
 export default function DayForm({ dateKey }) {
   const router = useRouter();
   const [values, setValues] = useState({ a: "", b: "", c: "" });
+  const [tags, setTags] = useState([]);
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [tagInput, setTagInput] = useState("");
   const [savedFlag, setSavedFlag] = useState("");
   const [loaded, setLoaded] = useState(false);
 
@@ -42,6 +46,7 @@ export default function DayForm({ dateKey }) {
     const existing = getEntry(dateKey);
     if (existing) {
       setValues({ a: existing.a || "", b: existing.b || "", c: existing.c || "" });
+      setTags(existing.tags || []);
     }
     setLoaded(true);
   }, [dateKey]);
@@ -50,8 +55,23 @@ export default function DayForm({ dateKey }) {
     setValues((prev) => ({ ...prev, [id]: text }));
   }
 
+  function toggleTag(name) {
+    setTags((prev) =>
+      prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name]
+    );
+  }
+
+  function handleAddCustomTag() {
+    const cleaned = normalizeTag(tagInput);
+    if (cleaned && !tags.includes(cleaned)) {
+      setTags((prev) => [...prev, cleaned]);
+    }
+    setTagInput("");
+    setShowTagInput(false);
+  }
+
   function handleSave() {
-    saveEntry(dateKey, values);
+    saveEntry(dateKey, { ...values, tags });
     setSavedFlag("保存しました");
     setTimeout(() => setSavedFlag(""), 1800);
   }
@@ -62,6 +82,8 @@ export default function DayForm({ dateKey }) {
   }
 
   const hasAnyContent = values.a || values.b || values.c;
+  // すでに選ばれているタグも一覧の先頭に出す（プリセットに無い自作タグも見えるように）
+  const chipList = [...new Set([...tags, ...PRESET_TAGS])];
 
   return (
     <div className="day-screen">
@@ -75,6 +97,39 @@ export default function DayForm({ dateKey }) {
             {formatYear(dateKey)}年 ・ {formatWeekday(dateKey)}
           </div>
         </div>
+
+        <div className="tag-row">
+          {chipList.map((name) => (
+            <button
+              key={name}
+              className={`chip${tags.includes(name) ? " chip-on" : ""}`}
+              onClick={() => toggleTag(name)}
+              type="button"
+            >
+              {name}
+            </button>
+          ))}
+
+          {showTagInput ? (
+            <input
+              className="tag-input"
+              autoFocus
+              value={tagInput}
+              placeholder="タグ名"
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddCustomTag()}
+              onBlur={handleAddCustomTag}
+            />
+          ) : (
+            <button
+              className="chip chip-add"
+              onClick={() => setShowTagInput(true)}
+              type="button"
+            >
+              ＋タグ
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="day-body">
@@ -83,7 +138,7 @@ export default function DayForm({ dateKey }) {
             {LAYERS.map((layer) => (
               <div className={`layer ${layer.cls}`} key={layer.id}>
                 <div className="layer-head">
-                  <span className="tag">{layer.tag}</span>
+                  <span className="code">{layer.code}</span>
                   <span className="title">{layer.title}</span>
                 </div>
                 <p className="hint">{layer.hint}</p>
@@ -127,7 +182,7 @@ export default function DayForm({ dateKey }) {
           /* iPhoneのステータスバー（ノッチ/Dynamic Island）と被らないよう、
              セーフエリア分の余白を必ず確保する（最低36pxは保証） */
           padding-top: max(env(safe-area-inset-top), 20px);
-          padding-bottom: 14px;
+          padding-bottom: 10px;
         }
         .back-btn {
           display: block;
@@ -155,11 +210,56 @@ export default function DayForm({ dateKey }) {
           color: #a9a398;
           margin-top: 2px;
         }
+        .tag-row {
+          display: flex;
+          gap: 6px;
+          overflow-x: auto;
+          padding: 10px 20px 2px;
+          scrollbar-width: none;
+        }
+        .tag-row::-webkit-scrollbar {
+          display: none;
+        }
+        .chip {
+          flex: 0 0 auto;
+          font-family: "Zen Kaku Gothic New", sans-serif;
+          font-size: 11px;
+          padding: 6px 11px;
+          border-radius: 999px;
+          border: 1px solid rgba(247, 243, 234, 0.28);
+          background: transparent;
+          color: #c9c4b8;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .chip-on {
+          background: var(--insight);
+          border-color: var(--insight);
+          color: #fff;
+          font-weight: 700;
+        }
+        .chip-add {
+          border-style: dashed;
+          color: #a9a398;
+        }
+        .tag-input {
+          flex: 0 0 auto;
+          width: 96px;
+          font-size: 11px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          border: 1px solid var(--insight);
+          background: #fff;
+          color: var(--ink);
+        }
+        .tag-input:focus {
+          outline: none;
+        }
         .day-body {
           background: var(--paper);
           border-radius: 20px 20px 0 0;
           margin-top: -10px;
-          padding: 16px 16px 10px;
+          padding: 14px 16px 10px;
           flex: 1 1 auto;
           display: flex;
           flex-direction: column;
@@ -173,7 +273,7 @@ export default function DayForm({ dateKey }) {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          gap: 8px;
+          gap: 7px;
           min-height: 0;
         }
         .layer-track::before {
@@ -195,7 +295,7 @@ export default function DayForm({ dateKey }) {
           position: relative;
           background: #fff;
           border-radius: 12px;
-          padding: 8px 10px;
+          padding: 7px 10px;
           box-shadow: 0 2px 8px rgba(43, 42, 40, 0.05);
           flex: 1 1 0;
           display: flex;
@@ -206,7 +306,7 @@ export default function DayForm({ dateKey }) {
           content: "";
           position: absolute;
           left: -16px;
-          top: 13px;
+          top: 12px;
           width: 8px;
           height: 8px;
           border-radius: 50%;
@@ -231,18 +331,18 @@ export default function DayForm({ dateKey }) {
           gap: 8px;
           flex-wrap: wrap;
         }
-        .tag {
+        .code {
           font-size: 10px;
           letter-spacing: 0.06em;
           font-weight: 700;
         }
-        .layer.fact .tag {
+        .layer.fact .code {
           color: var(--fact);
         }
-        .layer.feel .tag {
+        .layer.feel .code {
           color: var(--feel);
         }
-        .layer.insight .tag {
+        .layer.insight .code {
           color: var(--insight);
         }
         .title {
@@ -252,7 +352,7 @@ export default function DayForm({ dateKey }) {
         .hint {
           font-size: 10.5px;
           color: var(--ink-soft);
-          margin: 1px 0 5px;
+          margin: 1px 0 4px;
           line-height: 1.3;
         }
         textarea {
